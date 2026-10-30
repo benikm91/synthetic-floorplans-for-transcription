@@ -34,9 +34,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def scaled_nodes(nodes: list, factor: float) -> list:
+    return [{**node, "points": [[round(x * factor, 2), round(y * factor, 2)] for x, y in node["points"]]}
+            if "points" in node else node for node in nodes]
+
+
 def scaled(record: dict, factor: float) -> dict:
-    return {**record, "nodes": [{**node, "points": [[round(x * factor, 2), round(y * factor, 2)] for x, y in node["points"]]}
-                                if "points" in node else node for node in record["nodes"]]}
+    record = {**record, "nodes": scaled_nodes(record["nodes"], factor)}
+    if "furniture" in record:
+        record["furniture"] = {**record["furniture"], "nodes": scaled_nodes(record["furniture"]["nodes"], factor)}
+    if "furnishing" in record:
+        furnishing = record["furnishing"]
+        record["furnishing"] = {**furnishing, "scale": round(furnishing["scale"] * factor, 3),
+                                "items": [{**item, "box": [round(v * factor, 2) for v in item["box"]]} for item in furnishing["items"]]}
+    return record
 
 
 def drawn(job):

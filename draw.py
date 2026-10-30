@@ -3,11 +3,13 @@
 Every wall, outside or inside, is a black bar of one thickness along its segment, reaching half a
 thickness past its ends so that walls meeting in a corner close it. A door or outside door is a gap in
 its wall, closed across at each jamb; a window the same gap outlined, with a line down its middle. A room is not drawn: it is what its
-walls enclose.
+walls enclose. A record's furnishing, if it has one, is drawn beneath the walls (`icons.py`).
 """
 
 import numpy as np
 import skia
+
+import icons
 
 #: The thickness of a wall, and of the lines of doors and windows, in pixels of a 512 render.
 WALL = 6.0
@@ -25,6 +27,9 @@ def draw(record: dict, size: int) -> np.ndarray:
     black = skia.Paint(Color=skia.ColorBLACK, AntiAlias=True)
     white = skia.Paint(Color=skia.ColorWHITE, AntiAlias=False)
     stroke = skia.Paint(Color=skia.ColorBLACK, Style=skia.Paint.kStroke_Style, StrokeWidth=line, AntiAlias=True)
+    # The furniture first, for the walls to be drawn over it.
+    if record.get("furnishing"):
+        icons.draw_furnishing(canvas, record["furnishing"], size / 512)
 
     def bar(start, end, width: float, reach: float) -> skia.Rect:
         """The rectangle `width` across along a horizontal or vertical segment, `reach` past its ends."""

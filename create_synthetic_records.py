@@ -13,6 +13,8 @@ import json
 import multiprocessing
 from pathlib import Path
 
+import furnish
+import icons
 import synthetic
 
 #: The size of the drawing the records' points are placed in, in pixels.
@@ -31,7 +33,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def record(seed: int) -> str:
-    return json.dumps({"seed": seed, **synthetic.record_of(synthetic.generate(seed), SIZE)})
+    plan = synthetic.generate(seed)
+    furnishing = furnish.furnishing_of(plan, seed, SIZE)
+    return json.dumps({"seed": seed, **synthetic.record_of(plan, SIZE), "furniture": icons.furniture_record(furnishing),
+                       "furnishing": furnishing})
 
 
 def main() -> None:

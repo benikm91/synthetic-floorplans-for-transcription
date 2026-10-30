@@ -19,6 +19,8 @@ from PIL import Image
 from flask import Flask, jsonify, render_template_string, request, send_file
 
 import draw
+import furnish
+import icons
 import synthetic
 
 HTML_TEMPLATE = """
@@ -78,7 +80,7 @@ HTML_TEMPLATE = """
         .lit .hinge { fill: var(--lit) !important; }
         .partner .node { stroke: var(--partner) !important; stroke-width: 3.5; opacity: 1; }
         .source { fill: none; stroke-width: 1.4; opacity: 0.9; }
-        .hide-record #record, .hide-relations #relations, .hide-source #source, .hide-image #render { visibility: hidden; }
+        .hide-furniture #furniture, .hide-record #record, .hide-relations #relations, .hide-source #source, .hide-image #render { visibility: hidden; }
         @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -101,13 +103,14 @@ HTML_TEMPLATE = """
                 <div class="meta"><span id="sampleMeta">Loading…</span><span id="countMeta"></span></div>
                 <div class="frame" id="frame">
                     <img id="render" alt="">
-                    <svg id="overlay"><g id="source"></g><g id="relations"></g><g id="record"></g></svg>
+                    <svg id="overlay"><g id="source"></g><g id="furniture"></g><g id="relations"></g><g id="record"></g></svg>
                 </div>
                 <div class="toggles">
                     <label><input type="checkbox" id="showImage" checked> image</label>
                     <label><input type="checkbox" id="showRecord" checked> record</label>
                     <label><input type="checkbox" id="showRelations"> relationships</label>
                     <label><input type="checkbox" id="showSource"> rooms</label>
+                    <label><input type="checkbox" id="showFurniture" checked> furniture</label>
                 </div>
                 <div class="legend">
                     <span style="--c: var(--wall)">outside wall</span><span style="--c: var(--inside)">inside wall</span>
@@ -173,6 +176,15 @@ HTML_TEMPLATE = """
             const [a, b] = r.nodes.map(i => centre(sample.nodes[i], i));
             return `<g data-rel="${k}"><path class="relation" d="M ${P(a)} L ${P(b)}"/>`
                  + (r.type === 'joined' ? `<circle class="joint" cx="${(a[0] + b[0]) / 2}" cy="${(a[1] + b[1]) / 2}" r="3"/>` : '') + '</g>';
+        }).join('');
+        // The furniture record: each box, a dot at its first point (back-left) and a tick to its front.
+        $('furniture').innerHTML = ((sample.furniture || {}).nodes || []).map(f => {
+            const [[ax, ay], [bx, by]] = f.points, cx = (ax + bx) / 2, cy = (ay + by) / 2;
+            const [dx, dy] = {down: [0, 1], left: [-1, 0], up: [0, -1], right: [1, 0]}[f.facing];
+            const reach = (dx ? Math.abs(bx - ax) : Math.abs(by - ay)) / 2;
+            return `<g><title>${f.class} · ${f.facing}</title><rect x="${Math.min(ax, bx)}" y="${Math.min(ay, by)}" width="${Math.abs(bx - ax)}" height="${Math.abs(by - ay)}" `
+                + `style="fill:none;stroke:#0a8f5c;stroke-width:0.8"/><circle cx="${ax}" cy="${ay}" r="1.8" style="fill:#0a8f5c"/>`
+                + `<path d="M ${cx} ${cy} L ${cx + dx * reach} ${cy + dy * reach}" style="stroke:#c2187a;stroke-width:1"/></g>`;
         }).join('');
         $('source').innerHTML = (sample.rooms || []).map(r =>
             `<rect x="${r.x}" y="${r.y}" width="${r.size}" height="${r.size}" style="fill:${ROOM[r.kind]};opacity:0.35"/>`).join('')
@@ -245,7 +257,7 @@ HTML_TEMPLATE = """
     $('indexInput').onkeydown = e => { if (e.key === 'Enter') step(0); };
     const toggle = (box, cls) => $(box).onchange = e => $('frame').classList.toggle(cls, !e.target.checked);
     toggle('showImage', 'hide-image'); toggle('showRecord', 'hide-record'); toggle('showRelations', 'hide-relations');
-    toggle('showSource', 'hide-source');
+    toggle('showSource', 'hide-source'); toggle('showFurniture', 'hide-furniture');
     $('frame').classList.add('hide-source', 'hide-relations');
     window.addEventListener('keydown', e => {
         if (['INPUT', 'SELECT'].includes(e.target.tagName)) return;
@@ -267,8 +279,8 @@ HTML_TEMPLATE = """
 
 
 class Generator:
-    def __init__(self, size: int):
-        self.size = size
+    def __init__(self, size: int, furnished: bool = True):
+        self.size, self.furnished = size, furnished
 
     def summary(self) -> dict:
         return {"size": self.size}
@@ -276,6 +288,9 @@ class Generator:
     def sample(self, seed: int) -> dict:
         plan = synthetic.generate(seed)
         record = synthetic.record_of(plan, self.size)
+        if self.furnished:
+            record["furnishing"] = furnish.furnishing_of(plan, seed, self.size)
+            record["furniture"] = icons.furniture_record(record["furnishing"])
         scale, origin = synthetic.frame(plan, self.size)
         cell = synthetic.CELL * scale
         rows, cols = np.nonzero(plan.rooms >= 0)
@@ -287,9 +302,16 @@ class Generator:
             labels.append({"x": round(float(origin[0] + (c.mean() + 0.5) * cell), 1), "y": round(float(origin[1] + (r.mean() + 0.5) * cell), 1), "kind": kind})
         return {**record, "seed": seed, "room_count": len(plan.kinds), "rooms": rooms, "labels": labels}
 
+    def record(self, seed: int) -> dict:
+        plan = synthetic.generate(seed)
+        record = synthetic.record_of(plan, self.size)
+        if self.furnished:
+            record["furnishing"] = furnish.furnishing_of(plan, seed, self.size)
+        return record
+
     def image(self, seed: int) -> io.BytesIO:
         png = io.BytesIO()
-        Image.fromarray(draw.draw(synthetic.record_of(synthetic.generate(seed), self.size), self.size)).save(png, format="PNG")
+        Image.fromarray(draw.draw(self.record(seed), self.size)).save(png, format="PNG")
         png.seek(0)
         return png
 

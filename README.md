@@ -9,7 +9,8 @@ holds and how it is made is in [dataset_cards/synthetic.md](dataset_cards/synthe
 build copies into its folder as `README.md`.
 
 - `synthetic.py` generates a plan from its seed, checks it and writes its record;
-- `draw.py` draws a record.
+- `furnish.py` furnishes its rooms, so that each shows what it is;
+- `draw.py` draws a record and its furniture, the furniture's symbols from `icons.py`.
 
 ## Browse
 
@@ -22,15 +23,15 @@ uv run view_synthetic.py
 
 ## Build
 
-The published dataset -- 450,000 training plans in nine parts, 5,000 each for validation and test,
-images at 512 px -- from its seeds:
+The published dataset -- 1,000,000 training plans in twenty parts, 5,000 each for validation and
+test, images at 256 px -- from its seeds; stopped, it takes up again where it was:
 
 ```
-./build_synthetic.sh ./synthetic
+./build_synthetic.sh ./synthetic 256 20
 ```
 
-Generating is what takes the time, about 75,000 plans an hour on ten cores; drawing is a few minutes
-for all of them. The steps on their own:
+Generating is what takes the time, about 42,000 plans an hour on ten cores, furniture and all;
+drawing is a few minutes for all of them. The steps on their own:
 
 ```
 uv run create_synthetic_records.py --output-dir ./synthetic --split val --first-seed 1000000 --count 5000

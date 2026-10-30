@@ -9,6 +9,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import numpy as np
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Describe a dataset folder of records.")
@@ -24,13 +26,15 @@ def main() -> None:
                 seeds.append(held["seed"])
                 counts.update(node["class"] for node in held["nodes"])
                 counts.update(f"relationship: {r['type']}" for r in held["relationships"])
+                counts.update(f"furniture: {node['class']}" for node in held.get("furniture", {}).get("nodes", []))
         name = labels.name[: -len("_labels.jsonl")]
         splits[name] = {"plans": len(seeds), "seeds": [min(seeds), max(seeds)], "counts": dict(sorted(counts.items()))}
         print(name, len(seeds), flush=True)
+    size = np.load(next(args.dataset_dir.glob("*_images.npy")), mmap_mode="r").shape[1]
     (args.dataset_dir / "metadata.json").write_text(json.dumps({
         "format": "plan-records-v2",
         "source": "synthetic.py of synthetic-floorplans-for-transcription: every plan generated from its seed",
-        "images": "(N, 512, 512) uint8, drawn from the record by draw.py, row index = y, white background",
+        "images": f"(N, {size}, {size}) uint8, drawn from the label by draw.py, row index = y, white background",
         "frame": "pixels of the drawing, x from the left, y from the top",
         "splits": splits,
     }, indent=2), encoding="utf-8")
