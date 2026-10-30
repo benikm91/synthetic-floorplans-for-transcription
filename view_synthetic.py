@@ -151,7 +151,7 @@ HTML_TEMPLATE = """
         if (!n.points) {
             const [x, y] = centre(n, i);
             return `<g data-node="${i}"><circle class="node" style="fill:${ROOM[n.class] || '#999'}" cx="${x}" cy="${y}" r="5"/>`
-                + `<text x="${x}" y="${y - 8}" font-size="11" text-anchor="middle" fill="#333">${n.class}</text></g>`;
+                + `<text x="${x}" y="${y - 8}" font-size="11" text-anchor="middle" fill="#333" stroke="white" stroke-width="3" paint-order="stroke">${n.class}</text></g>`;
         }
         const c = colour(n.class), [a, b] = n.points;
         return `<g data-node="${i}"><path class="node" style="stroke:${c}" d="M ${P(a)} L ${P(b)}"/>`
