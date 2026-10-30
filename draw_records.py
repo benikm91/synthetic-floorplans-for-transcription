@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
 
 def scaled(record: dict, factor: float) -> dict:
     return {**record, "nodes": [{**node, "points": [[round(x * factor, 2), round(y * factor, 2)] for x, y in node["points"]]}
-                                for node in record["nodes"]]}
+                                if "points" in node else node for node in record["nodes"]]}
 
 
 def drawn(job):

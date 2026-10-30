@@ -13,7 +13,7 @@ tags:
 # synthetic-floorplans-for-transcription
 
 Floor plans as a transcription task: each plan as the image a model reads, and the record of its
-walls, doors and windows that the model should write. The plans are generated, so every record is
+walls, doors, windows and rooms that the model should write. The plans are generated, so every record is
 exact, and the image is drawn from the record alone, so the record is all the image shows.
 
 ![The first 64 training plans, each image next to its record](train_examples_8x16.png)
@@ -55,7 +55,7 @@ clear of corners and of each other, every opening in exactly one wall, and no wa
 
 `(N, 512, 512)` uint8, row index = y, black on white, in the order of the labels beside it. Drawn from the record alone (`draw.py`): every wall a bar 6 px thick reaching
 half its thickness past its ends; a door or outside door a gap in it, closed across at each jamb; a
-window the same gap outlined, with a line down its middle. The plan is centred and scaled to fill 90%
+window the same gap outlined, with a line down its middle. Rooms are not drawn. The plan is centred and scaled to fill 90%
 of the image, at most 40 px per metre.
 
 ## Record
@@ -66,12 +66,15 @@ of the image, at most 40 px per metre.
            {"class": "inside wall", "points": [[x, y], [x, y]]},
            {"class": "door", "points": [[x, y], [x, y]]},
            {"class": "outside door", "points": [[x, y], [x, y]]},
-           {"class": "window", "points": [[x, y], [x, y]]}],
- "relationships": [{"type": "joined", "nodes": [0, 7]}, {"type": "in", "nodes": [14, 1]}]}
+           {"class": "window", "points": [[x, y], [x, y]]},
+           {"class": "living"}, {"class": "bathroom"}, {"class": "bedroom"}],
+ "relationships": [{"type": "joined", "nodes": [0, 7]}, {"type": "in", "nodes": [14, 1]},
+                   {"type": "borders", "nodes": [3, 21]}]}
 ```
 
-Points are in the pixels of the image, x from the left, y from the top. Every node is a horizontal or
-vertical segment read rightwards or downwards.
+Points are in the pixels of the image, x from the left, y from the top. Every node but a room is a
+horizontal or vertical segment read rightwards or downwards; a room has no points. The walls come
+first, then the openings, then the rooms.
 
 | class | points |
 |---|---|
@@ -80,12 +83,17 @@ vertical segment read rightwards or downwards.
 | door | Its jambs, in an inside wall. |
 | outside door | Its jambs, in an outside wall. |
 | window | Its jambs, in an outside wall. |
+| living, kitchen, bedroom, bathroom, storage, balcony | None: a room is its kind alone, and where it is follows from the walls that border it. |
 
 A wall runs straight from a corner or junction to the next, through its doors and windows; where
 another wall meets it, it ends.
 
 - `joined` [wall, wall]: the two walls share an end. Lower index first.
 - `in` [opening, wall]: the door, outside door or window stands in that wall.
+- `borders` [wall or opening, room]: the room lies on one side of it. An inside wall or a door
+  borders the two rooms on either side; an outside wall, an outside door or a window borders one,
+  the outside on its other side. A wall ends wherever another meets it, so the same room lies along
+  all of it on either side. Two rooms bordered by the same door are walked between through it.
 
 ## Splits and files
 

@@ -1,7 +1,7 @@
 """A sheet of plans from a split: each input image next to its record, drawn alone.
 
 Outside walls are drawn dark red, inside walls orange, doors magenta, outside doors green, windows
-blue, each segment from its start (dot) to its end. The sheet goes into the dataset folder, for the
+blue, each segment from its start (dot) to its end; rooms, which have no points, are not drawn. The sheet goes into the dataset folder, for the
 card.
 
     uv run preview_records.py --dataset-dir ./synthetic --split train-00 --output ./synthetic/train_examples_8x16.png
@@ -46,6 +46,8 @@ def main() -> None:
         drawn = Image.new("RGB", (size, size), "white")
         pen = ImageDraw.Draw(drawn)
         for node in json.loads(labels[at])["nodes"]:
+            if "points" not in node:
+                continue
             (x0, y0), (x1, y1) = node["points"]
             colour = COLOURS[node["class"]]
             pen.line([(x0, y0), (x1, y1)], fill=colour, width=3)

@@ -1,8 +1,8 @@
 # synthetic-floorplans-for-transcription
 
 Synthetic floor plans for transcription: per plan, the drawing a model reads and the record of its
-walls, doors and windows it should write, and which walls are joined and which wall each opening
-stands in. Every plan is generated from its seed and keeps the rules a plan must -- walls horizontal
+walls, doors, windows and rooms it should write, and which walls are joined, which wall each opening
+stands in and which rooms each wall and opening borders. Every plan is generated from its seed and keeps the rules a plan must -- walls horizontal
 or vertical, exactly one wall between two rooms, every room reachable and opening off the living
 room, windows only in outside walls -- and the drawing is drawn from the record alone. What a plan
 holds and how it is made is in [dataset_cards/synthetic.md](dataset_cards/synthetic.md), which each

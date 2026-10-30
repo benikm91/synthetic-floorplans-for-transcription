@@ -23,7 +23,8 @@ the plan is then laid out again from the seed's next attempt, its programme kept
 `problems` checks every rule a plan must keep; a plan that breaks one is never returned.
 
 The record names the walls -- outside or inside -- and the doors, windows and outside doors, each as
-a segment, and which walls are joined and which wall each opening stands in. A wall runs straight
+a segment, and the rooms, each by its kind alone; which walls are joined, which wall each opening
+stands in, and which rooms each wall and opening borders. A wall runs straight
 from a corner or junction to the next, through its doors and windows; where another wall meets it,
 it ends, so walls are joined exactly where they share an end. The render is drawn from the record
 alone (`draw.py`).
@@ -621,10 +622,24 @@ def record_of(plan: Plan, size: int) -> dict:
              for w in walls]
     relationships = [{"type": "joined", "nodes": [i, j]} for i, j in combinations(range(len(walls)), 2)
                      if {tuple(p) for p in nodes[i]["points"]} & {tuple(p) for p in nodes[j]["points"]}]
+    # Every node that borders a room, and the spaces on its two sides: a wall ends wherever another
+    # meets it, so the same room lies along all of it on either side.
+    bordered = []
+    for at, wall in enumerate(walls):
+        one, other = sides(plan.rooms, wall.horizontal)
+        joined = set(one[wall.line, wall.low:wall.high].tolist()) | set(other[wall.line, wall.low:wall.high].tolist())
+        assert len(joined) == 2, f"{wall} borders {joined}"
+        bordered.append((at, joined))
     for opening in sorted(plan.openings, key=lambda o: (o.kind, o.horizontal, o.line, o.low)):
         nodes.append({"class": opening.kind, "points": [px(opening.horizontal, opening.line * CELL, opening.low),
                                                          px(opening.horizontal, opening.line * CELL, opening.high)]})
         host = next(at for at, w in enumerate(walls) if w.horizontal == opening.horizontal and w.line == opening.line
                     and w.low * CELL <= opening.low and opening.high <= w.high * CELL)
         relationships.append({"type": "in", "nodes": [len(nodes) - 1, host]})
+        bordered.append((len(nodes) - 1, _joins(plan.rooms, opening)))
+    # The rooms last, in the order they were laid out, each by its kind alone.
+    first_room = len(nodes)
+    nodes += [{"class": kind} for kind in plan.kinds]
+    for at, joined in bordered:
+        relationships += [{"type": "borders", "nodes": [at, first_room + room]} for room in sorted(joined - {-1})]
     return {"nodes": nodes, "relationships": relationships}

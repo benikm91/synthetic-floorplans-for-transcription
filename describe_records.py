@@ -28,7 +28,7 @@ def main() -> None:
         splits[name] = {"plans": len(seeds), "seeds": [min(seeds), max(seeds)], "counts": dict(sorted(counts.items()))}
         print(name, len(seeds), flush=True)
     (args.dataset_dir / "metadata.json").write_text(json.dumps({
-        "format": "plan-records-v1",
+        "format": "plan-records-v2",
         "source": "synthetic.py of synthetic-floorplans-for-transcription: every plan generated from its seed",
         "images": "(N, 512, 512) uint8, drawn from the record by draw.py, row index = y, white background",
         "frame": "pixels of the drawing, x from the left, y from the top",

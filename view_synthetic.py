@@ -1,8 +1,9 @@
 """Sample synthetic floor plans in a local web UI: each plan generated from its seed, drawn from its
 record, with the record laid over it.
 
-Hovering a node or a relationship lights it up on the drawing and in the lists. The rooms the plan
-was laid out from, and their kinds, can be laid over it too; they are not part of the record.
+Hovering a node or a relationship lights it up on the drawing and in the lists; a room, which has no
+points, is shown at the middle of the walls that border it. The cells of the rooms the plan was laid
+out from can be laid over it too; they are not part of the record.
 
     uv run view_synthetic.py
 """
@@ -147,6 +148,11 @@ HTML_TEMPLATE = """
     const pt = ([x, y]) => `(${f1(x)},${f1(y)})`;
 
     function nodeShape(n, i) {
+        if (!n.points) {
+            const [x, y] = centre(n, i);
+            return `<g data-node="${i}"><circle class="node" style="fill:${ROOM[n.class] || '#999'}" cx="${x}" cy="${y}" r="5"/>`
+                + `<text x="${x}" y="${y - 8}" font-size="11" text-anchor="middle" fill="#333">${n.class}</text></g>`;
+        }
         const c = colour(n.class), [a, b] = n.points;
         return `<g data-node="${i}"><path class="node" style="stroke:${c}" d="M ${P(a)} L ${P(b)}"/>`
             + `<circle class="hinge" style="fill:${c}" cx="${a[0]}" cy="${a[1]}" r="2.5"/>`
@@ -154,13 +160,17 @@ HTML_TEMPLATE = """
             + `<path class="hit" d="M ${P(a)} L ${P(b)}"/></g>`;
     }
 
-    const centre = n => n.points.reduce((s, q) => [s[0] + q[0] / n.points.length, s[1] + q[1] / n.points.length], [0, 0]);
+    const middle = ps => ps.reduce((s, q) => [s[0] + q[0] / ps.length, s[1] + q[1] / ps.length], [0, 0]);
+    // A room has no points: it is shown at the middle of the walls that border it.
+    const centre = (n, i) => n.points ? middle(n.points) : middle(sample.relationships
+        .filter(r => r.type === 'borders' && r.nodes[1] === i && sample.nodes[r.nodes[0]].class.endsWith('wall'))
+        .map(r => middle(sample.nodes[r.nodes[0]].points)));
 
     function draw() {
         $('overlay').setAttribute('viewBox', `0 0 ${info.size} ${info.size}`);
         $('record').innerHTML = sample.nodes.map(nodeShape).join('');
         $('relations').innerHTML = sample.relationships.map((r, k) => {
-            const [a, b] = r.nodes.map(i => centre(sample.nodes[i]));
+            const [a, b] = r.nodes.map(i => centre(sample.nodes[i], i));
             return `<g data-rel="${k}"><path class="relation" d="M ${P(a)} L ${P(b)}"/>`
                  + (r.type === 'joined' ? `<circle class="joint" cx="${(a[0] + b[0]) / 2}" cy="${(a[1] + b[1]) / 2}" r="3"/>` : '') + '</g>';
         }).join('');
@@ -195,7 +205,7 @@ HTML_TEMPLATE = """
     function lists() {
         $('nodes').innerHTML = sample.nodes.map((n, i) =>
             `<span class="row" data-node="${i}">#${String(i).padStart(3)} <span class="kind">${n.class.padEnd(14)}</span> `
-            + n.points.map(pt).join(' ') + '</span>'
+            + (n.points || []).map(pt).join(' ') + '</span>'
         ).join('') || '<span class="row muted">none</span>';
         $('relationships').innerHTML = sample.relationships.map((r, k) =>
             `<span class="row" data-rel="${k}"><span class="kind">${r.type.padEnd(7)}</span> `

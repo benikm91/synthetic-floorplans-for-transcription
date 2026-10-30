@@ -2,7 +2,8 @@
 
 Every wall, outside or inside, is a black bar of one thickness along its segment, reaching half a
 thickness past its ends so that walls meeting in a corner close it. A door or outside door is a gap in
-its wall, closed across at each jamb; a window the same gap outlined, with a line down its middle.
+its wall, closed across at each jamb; a window the same gap outlined, with a line down its middle. A room is not drawn: it is what its
+walls enclose.
 """
 
 import numpy as np
@@ -11,6 +12,8 @@ import skia
 #: The thickness of a wall, and of the lines of doors and windows, in pixels of a 512 render.
 WALL = 6.0
 LINE = 1.0
+#: The nodes drawn as gaps in their walls; rooms are not drawn at all.
+OPENINGS = ("door", "outside door", "window")
 
 
 def draw(record: dict, size: int) -> np.ndarray:
@@ -34,7 +37,7 @@ def draw(record: dict, size: int) -> np.ndarray:
         if node["class"].endswith("wall"):
             canvas.drawRect(bar(*node["points"], wall, wall / 2), black)
     for node in record["nodes"]:
-        if node["class"].endswith("wall"):
+        if node["class"] not in OPENINGS:
             continue
         gap = bar(*node["points"], wall, 0)
         canvas.drawRect(bar(*node["points"], wall + 2, 0), white)
